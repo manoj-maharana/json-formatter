@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Pretty | Formatter and Validator</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='85'%3E%7B%7D%3C/text%3E%3C/svg%3E">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#0f1211;--surface:#171b19;--surface-soft:#1d221f;--border:#2c3430;--text:#f1f3ee;--muted:#9ca69f;--accent:#20b8a6;--accent-dim:#189886;--accent-glow:rgba(32,184,166,.2);--success:#4fb86f;--error:#ff6b5f;--radius:8px;--font-mono:'SF Mono','Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas',monospace;--font-sans:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif}
+  html{font-size:15px}
+  body{background:radial-gradient(circle at top left,rgba(32,184,166,.08),transparent 32%),linear-gradient(180deg,#111514 0%,var(--bg) 46%,#0c0f0e 100%);color:var(--text);font-family:var(--font-sans);min-height:100vh;display:flex;flex-direction:column}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+  header{display:flex;align-items:center;gap:12px;padding:20px 24px 14px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap;max-width:1440px;width:100%;margin:0 auto}
+  header h1{font-size:1.35rem;font-weight:720;letter-spacing:0;display:flex;align-items:center;gap:8px}
+  header h1 .brace{color:var(--accent)}
+  header h1 span:not(.brace){color:var(--text)}
+  header .sub{color:var(--muted);font-size:.82rem;margin-left:auto}
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:.7rem;font-weight:650;padding:2px 8px;border-radius:99px;background:rgba(32,184,166,.14);border:1px solid rgba(32,184,166,.35);color:#7ce3d5;text-transform:uppercase;letter-spacing:.04em}
+
+  .app{flex:1;display:flex;gap:0;padding:0;max-width:1400px;width:100%;margin:0 auto}
+  @media(min-width:900px){.app{flex-direction:row;padding:20px 24px 24px;gap:18px}}
+  @media(max-width:899px){.app{flex-direction:column;padding:12px 14px;gap:12px}}
+
+  .panel{flex:1;min-width:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--surface-soft),var(--surface));border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);overflow:hidden;box-shadow:0 16px 44px rgba(0,0,0,.28)}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.025);flex-wrap:wrap;gap:6px}
+  .panel-head label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#c4ccc5;display:flex;align-items:center;gap:6px}
+  .panel-head .count{font-size:.7rem;color:var(--muted);font-family:var(--font-mono);background:rgba(255,255,255,.045);padding:2px 8px;border-radius:6px}
+
+  #input{flex:1;resize:none;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font-mono);font-size:.84rem;line-height:1.62;padding:16px;tab-size:2;min-height:220px}
+  #input::placeholder{color:var(--muted);opacity:.58}
+  #input.drag-over{background:rgba(32,184,166,.08)}
+
+  .output-wrap{flex:1;position:relative;overflow:auto}
+  #output{display:none;font-family:var(--font-mono);font-size:.84rem;line-height:1.62;padding:16px;white-space:pre-wrap;word-break:break-word;tab-size:2;overflow:auto;min-height:220px}
+  #output.show{display:block}
+  #error{display:none;padding:16px;color:var(--error);font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:rgba(255,107,95,.09);border-top:2px solid var(--error)}
+  #error.show{display:block}
+  #placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:44px 22px;color:var(--muted);text-align:center;flex:1;min-height:220px}
+  #placeholder .icon{font-size:2.4rem;opacity:.42;color:var(--accent)}
+  #placeholder p{font-size:.85rem;max-width:280px;line-height:1.5}
+  #placeholder.hide{display:none}
+
+  .json-key{color:#80decf}
+  .json-string{color:#f1c27d}
+  .json-number{color:#8ab7ff}
+  .json-boolean{color:#c6a4ff}
+  .json-null{color:#c6a4ff}
+  .json-bracket{color:var(--text)}
+  .json-comma{color:var(--muted)}
+  .json-colon{color:var(--muted)}
+
+  /* JSONPath indicator */
+  .jsonpath-bar{display:none;flex-shrink:0;padding:9px 16px;background:rgba(32,184,166,.09);border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:.78rem;color:var(--accent);gap:8px;align-items:center;cursor:pointer;user-select:none}
+  .jsonpath-bar.show{display:flex}
+  .jsonpath-bar .jp-label{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+  .jsonpath-bar .jp-path{flex:1;word-break:break-all}
+  .jsonpath-bar .jp-clear{color:var(--muted);font-size:.8rem;cursor:pointer;flex-shrink:0}
+  .jsonpath-bar .jp-clear:hover{color:var(--text)}
+
+  /* Tree search */
+  .tree-search-wrap{display:none;padding:10px 16px;border-bottom:1px solid var(--border)}
+  .tree-search-wrap.show{display:block}
+  .tree-search-wrap input{width:100%;background:#101412;border:1px solid var(--border);border-radius:8px;padding:8px 11px;color:var(--text);font-family:var(--font-mono);font-size:.78rem;outline:none}
+  .tree-search-wrap input:focus{border-color:var(--accent)}
+  .tree-search-wrap input::placeholder{color:var(--muted);opacity:.5}
+
+  /* Tree view */
+  .tree-wrap{display:none;flex:1;overflow:auto;padding:14px 16px;font-family:var(--font-mono);font-size:.84rem;line-height:1.72;min-height:170px}
+  .tree-wrap.show{display:block}
+  .tree-toggle{cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:1px;color:var(--muted);font-size:.65rem;width:1.4em;flex-shrink:0}
+  .tree-toggle:hover{color:var(--accent)}
+  .tree-line{display:flex;align-items:flex-start;flex-wrap:nowrap;min-height:1.7em;padding-left:0}
+  .tree-indent{display:inline-block;width:0;flex-shrink:0}
+  .tree-indent.has{width:1.2em;border-left:1px dotted rgba(255,255,255,.07);margin-left:0}
+  .tree-line .kv{display:inline;word-break:break-all}
+  .tree-line .key{color:#80decf;cursor:pointer}
+  .tree-line .key:hover{text-decoration:underline}
+  .tree-line .sep{color:var(--muted)}
+  .tree-line .val-string{color:#f1c27d}
+  .tree-line .val-number{color:#8ab7ff}
+  .tree-line .val-boolean{color:#c6a4ff}
+  .tree-line .val-null{color:#c6a4ff}
+  .tree-collapsed .tree-children{display:none}
+  .tree-collapsed>.tree-line>.tree-toggle::after{content:'\25B6'}
+  .tree-expanded>.tree-line>.tree-toggle::after{content:'\25BC'}
+  .tree-toggle::after{font-size:.6rem;display:inline-block;width:1em;text-align:center}
+  .tree-leaf>.tree-line>.tree-toggle{visibility:hidden}
+  .tree-children{margin-left:0}
+
+  /* Tree search highlight */
+  .tree-highlight{background:rgba(32,184,166,.2);border-radius:2px;padding:0 2px}
+  .tree-hidden{display:none !important}
+  .tree-match>.tree-line>.kv{background:rgba(32,184,166,.15);border-radius:3px;padding:0 2px}
+
+  /* BUTTONS */
+  .toolbar{display:flex;gap:7px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center;background:rgba(255,255,255,.018)}
+  .toolbar .spacer{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:.78rem;font-weight:650;font-family:var(--font-sans);border:1px solid var(--border);border-radius:8px;cursor:pointer;background:rgba(255,255,255,.025);color:var(--text);transition:all .15s;white-space:nowrap}
+  .btn:hover{background:rgba(255,255,255,.065);border-color:#56605a}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:var(--accent);color:#061311;border-color:var(--accent);box-shadow:0 0 0 1px rgba(255,255,255,.06) inset}
+  .btn-primary:hover{background:var(--accent-dim);border-color:var(--accent-dim)}
+  .btn-success{background:var(--success);color:#fff;border-color:var(--success)}
+  .btn-success:hover{background:#2ea043;border-color:#2ea043}
+  .btn-outline-accent{border-color:var(--accent);color:var(--accent)}
+  .btn-outline-accent:hover{background:var(--accent-glow)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+  #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);background:#1b211e;color:var(--text);padding:10px 22px;border-radius:8px;font-size:.85rem;border:1px solid var(--border);opacity:0;transition:all .3s ease;pointer-events:none;z-index:999;box-shadow:0 14px 36px rgba(0,0,0,.45)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .drop-indicator{display:none;position:absolute;inset:0;border:2px dashed var(--accent);border-radius:var(--radius);background:rgba(32,184,166,.08);z-index:10;align-items:center;justify-content:center;font-size:1rem;color:var(--accent);font-weight:700;pointer-events:none;backdrop-filter:blur(2px)}
+  .drop-indicator.show{display:flex}
+
+  @media(max-width:500px){
+    header{padding:14px 14px 10px}
+    header h1{font-size:1.1rem}
+    .panel-head{padding:8px 10px}
+    .toolbar{padding:8px 10px;gap:4px}
+    .btn{padding:5px 10px;font-size:.72rem}
+    #input,#output{padding:10px;font-size:.78rem;min-height:140px}
+    #placeholder{padding:24px 14px}
+    .tree-wrap{padding:10px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="brace">{</span>json<span class="brace">}</span> <span>pretty</span></h1>
+  <span class="badge">v1.1</span>
+  <div class="sub">formatter | validator | tree view | JSONPath search</div>
+</header>
+
+<div class="app">
+
+  <!-- Source panel -->
+  <div class="panel" id="input-panel">
+    <div class="panel-head">
+      <label>&#9660; Input</label>
+      <span class="count" id="input-count">0 chars, 0 lines</span>
+    </div>
+    <div style="position:relative;flex:1;display:flex;flex-direction:column">
+      <div class="drop-indicator" id="drop-indicator">Drop JSON file here</div>
+      <textarea id="input" placeholder='Paste JSON here, or drag & drop a .json file...&#10;&#10;Example:&#10;{"name":"JSON Pretty","version":1,"active":true}' spellcheck="false"></textarea>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btn-format">&#x2192; Format</button>
+      <button class="btn" id="btn-minify">&#x2192; Minify</button>
+      <button class="btn btn-outline-accent" id="btn-validate">&#x2713; Validate</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btn-copy">&#x2398; Copy</button>
+      <button class="btn" id="btn-tree">&#x25B6; Tree</button>
+    </div>
+  </div>
+
+  <!-- Result panel -->
+  <div class="panel" id="output-panel">
+    <div class="panel-head">
+      <label>&#9660; Output</label>
+      <span class="count" id="output-count"></span>
+    </div>
+    <div class="output-wrap">
+      <div id="placeholder">
+        <div class="icon">{ }</div>
+        <p>Format or validate your JSON &mdash; results appear here</p>
+      </div>
+      <pre id="output"></pre>
+      <div id="error"></div>
+      <!-- JSONPath bar -->
+      <div class="jsonpath-bar" id="jsonpath-bar">
+        <span class="jp-label">JSONPath</span>
+        <span class="jp-path" id="jsonpath-text"></span>
+        <span class="jp-clear" id="jsonpath-clear" title="Clear">&times;</span>
+      </div>
+      <!-- Tree search -->
+      <div class="tree-search-wrap" id="tree-search-wrap">
+        <input type="text" id="tree-search" placeholder="Search tree nodes..." autocomplete="off">
+      </div>
+      <div class="tree-wrap" id="tree-wrap"></div>
+    </div>
+    <div class="toolbar" style="border-top:none;border-top:1px solid var(--border)">
+      <span style="font-size:.72rem;color:var(--muted)" id="status-text">Ready</span>
+      <span class="spacer"></span>
+      <button class="btn" id="btn-clear" style="color:var(--muted)">&#x2716; Clear</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  const $id = id => document.getElementById(id);
+  const sourceBox     = $id('input');
+  const resultBox    = $id('output');
+  const errorBox     = $id('error');
+  const emptyState        = $id('placeholder');
+  const treePane  = $id('tree-wrap');
+  const sourceStats  = $id('input-count');
+  const resultStats = $id('output-count');
+  const statusLabel = $id('status-text');
+  const dropCue   = $id('drop-indicator');
+  const notice     = $id('toast');
+  const pathBar = $id('jsonpath-bar');
+  const pathText = $id('jsonpath-text');
+  const pathClear = $id('jsonpath-clear');
+  const treeFinderShell = $id('tree-search-wrap');
+  const treeFinder = $id('tree-search');
+
+  let isTreeOpen = false;
+  let latestResult = '';
+  let latestTreeData = null;
+  let activeJsonPath = '';
+
+  function encodeHtml(s){
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function lineTotal(s){return s ? s.split('\n').length : 0}
+  function charTotal(s){return s ? s.length : 0}
+
+  function refreshSourceStats(){
+    const t = sourceBox.value;
+    sourceStats.textContent = charTotal(t) + ' chars, ' + lineTotal(t) + ' lines';
+  }
+  refreshSourceStats();
+  sourceBox.addEventListener('input', refreshSourceStats);
+
+  function flashNotice(msg){
+    notice.textContent = msg;
+    notice.classList.add('show');
+    clearTimeout(notice._t);
+    notice._t = setTimeout(() => notice.classList.remove('show'), 2500);
+  }
+
+  function paintStatus(msg, ok){
+    statusLabel.textContent = msg;
+    statusLabel.style.color = ok ? 'var(--success)' : 'var(--error)';
+    setTimeout(() => { if(statusLabel.textContent===msg) statusLabel.style.color='var(--muted)'; }, 3000);
+  }
+
+  /* ---- pretty-print coloring ---- */
+  function highlightJson(json){
+    if(typeof json !== 'string') json = JSON.stringify(json, null, 2);
+    return encodeHtml(json).replace(
+      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"\s*:|"(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|\btrue\b|\bfalse\b|\bnull\b)/g,
+      token => {
+        let cls = 'json-number';
+        if(token.startsWith('"')) cls = token.trimEnd().endsWith(':') ? 'json-key' : 'json-string';
+        else if(token === 'true' || token === 'false') cls = 'json-boolean';
+        else if(token === 'null') cls = 'json-null';
+        return '<span class="' + cls + '">' + token + '</span>';
+      }
+    );
+  }
+
+  /* ---- formatter actions ---- */
+  function readJson(){
+    const raw = sourceBox.value.trim();
+    if(!raw){ flashNotice('Please enter JSON first'); return null; }
+    try{ return JSON.parse(raw); } catch(e){ renderParseError(e); return null; }
+  }
+
+  function renderParseError(e){
+    const msg = e.message || String(e);
+    const m = msg.match(/position\s+(\d+)/i);
+    let formatted = '<strong>Invalid JSON</strong><br>' + encodeHtml(msg);
+    if(m){
+      const pos = +m[1];
+      const s = sourceBox.value;
+      const before = s.slice(0, pos);
+      const line = before.split('\n').length;
+      const col = pos - before.lastIndexOf('\n');
+      formatted += '<br><span style="color:var(--muted)">→ line ' + line + ', column ' + col + '</span>';
+    }
+    resultBox.classList.remove('show');
+    closeTreeMode(false);
+    emptyState.classList.add('hide');
+    errorBox.innerHTML = formatted;
+    errorBox.classList.add('show');
+    resultStats.textContent = '';
+    paintStatus('Invalid', false);
+    latestResult = '';
+    latestTreeData = null;
+  }
+
+  function clearParseError(){ errorBox.classList.remove('show'); errorBox.innerHTML = ''; }
+
+  function closeTreeMode(clearTree){
+    if(clearTree) treePane.innerHTML = '';
+    treePane.classList.remove('show');
+    isTreeOpen = false;
+    $id('btn-tree').textContent = '\u25B6 Tree';
+    pathBar.classList.remove('show');
+    treeFinderShell.classList.remove('show');
+    treeFinder.value = '';
+  }
+
+  function renderResult(html, raw){
+    clearParseError();
+    emptyState.classList.add('hide');
+    resultBox.innerHTML = html;
+    resultBox.classList.add('show');
+    closeTreeMode(false);
+    if(raw !== undefined){
+      resultStats.textContent = charTotal(raw) + ' chars, ' + lineTotal(raw) + ' lines';
+      latestResult = raw;
+    }
+    paintStatus('Valid JSON', true);
+  }
+
+  function prettyPrintJson(){
+    const obj = readJson();
+    if(!obj) return;
+    const pretty = JSON.stringify(obj, null, 2);
+    renderResult(highlightJson(pretty), pretty);
+  }
+
+  function compactJson(){
+    const obj = readJson();
+    if(!obj) return;
+    const min = JSON.stringify(obj);
+    renderResult(encodeHtml(min), min);
+  }
+
+  function checkJson(){
+    const raw = sourceBox.value.trim();
+    if(!raw){ flashNotice('Please enter JSON first'); return; }
+    try{
+      JSON.parse(raw);
+      clearParseError();
+      emptyState.classList.add('hide');
+      const pretty = JSON.stringify(JSON.parse(raw), null, 2);
+      resultBox.innerHTML = '<span style="color:var(--success);font-weight:600">&#x2714; Valid JSON</span>\n\n' + highlightJson(pretty);
+      resultBox.classList.add('show');
+      closeTreeMode(false);
+      resultStats.textContent = '';
+      paintStatus('Valid JSON', true);
+      latestResult = pretty;
+    } catch(e){
+      renderParseError(e);
+    }
+  }
+
+  function resetWorkspace(){
+    sourceBox.value = '';
+    resultBox.innerHTML = '';
+    resultBox.classList.remove('show');
+    errorBox.classList.remove('show');
+    errorBox.innerHTML = '';
+    emptyState.classList.remove('hide');
+    closeTreeMode(true);
+    sourceStats.textContent = '0 chars, 0 lines';
+    resultStats.textContent = '';
+    statusLabel.textContent = 'Cleared';
+    statusLabel.style.color = 'var(--muted)';
+    latestResult = '';
+    latestTreeData = null;
+  }
+
+  function copyResult(){
+    if(!latestResult){ flashNotice('Nothing to copy'); return; }
+    navigator.clipboard.writeText(latestResult).then(() => {
+      flashNotice('Copied to clipboard');
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = latestResult;
+      ta.style.position='fixed';ta.style.left='-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try{ document.execCommand('copy'); flashNotice('Copied to clipboard'); } catch(e){ flashNotice('Copy failed'); }
+      document.body.removeChild(ta);
+    });
+  }
+
+  /* ---- path display helpers ---- */
+  function revealJsonPath(path){
+    activeJsonPath = path;
+    pathText.textContent = path;
+    pathBar.classList.add('show');
+  }
+
+  pathClear.addEventListener('click', function(){
+    pathBar.classList.remove('show');
+    activeJsonPath = '';
+    // clear active path styling
+    treePane.querySelectorAll('.tree-active-path').forEach($id => $id.classList.remove('tree-active-path'));
+  });
+
+  /* ---- expandable tree view ---- */
+  function collectTreeRows(data, path) {
+    const lines = [];
+    const type = Array.isArray(data) ? 'array' : typeof data;
+
+    if(data === null){ lines.push({html:'<span class="val-null">null</span>', children:[], path: path}); return lines; }
+    if(type === 'string'){ lines.push({html:'<span class="val-string">"'+encodeHtml(data)+'"</span>', children:[], path: path}); return lines; }
+    if(type === 'number'){ lines.push({html:'<span class="val-number">'+data+'</span>', children:[], path: path}); return lines; }
+    if(type === 'boolean'){ lines.push({html:'<span class="val-boolean">'+data+'</span>', children:[], path: path}); return lines; }
+
+    const entries = Array.isArray(data) ? data : Object.keys(data);
+    const isArr = Array.isArray(data);
+    const len = isArr ? data.length : Object.keys(data).length;
+
+    if(len === 0){
+      lines.push({html: isArr ? '<span class="json-bracket">[</span><span class="json-bracket">]</span>' : '<span class="json-bracket">{</span><span class="json-bracket">}</span>', children:[], path: path});
+      return lines;
+    }
+
+    const openBracket = isArr ? '[' : '{';
+    const closeBracket = isArr ? ']' : '}';
+    lines.push({html: '<span class="json-bracket">'+openBracket+'</span>', children:[], isContainer:true, path: path});
+
+    const children = [];
+    if(isArr){
+      for(let i=0; i<len; i++){
+        const val = data[i];
+        const childPath = path + '[' + i + ']';
+        const sub = collectTreeRows(val, childPath);
+        children.push({key: null, keyPath: childPath, valueLines: sub, trailing: i===len-1 ? '' : ','});
+      }
+    } else {
+      const keys = Object.keys(data);
+      for(let i=0; i<keys.length; i++){
+        const k = keys[i];
+        const val = data[k];
+        const childPath = path + '.' + k;
+        const sub = collectTreeRows(val, childPath);
+        children.push({key: k, keyPath: childPath, valueLines: sub, trailing: i===keys.length-1 ? '' : ','});
+      }
+    }
+    lines.push({children, closeBracket, isChildren:true, path: path});
+    lines.push({html: '<span class="json-bracket">'+closeBracket+'</span>', children:[], isClose:true, path: path});
+    return lines;
+  }
+
+  function makeTreeView(data, depth){
+    const lines = collectTreeRows(data, '$');
+    const wrap = document.createElement('div');
+    wrap.className = 'tree-container';
+    drawTreeRows(lines, wrap, 0, true);
+    return wrap;
+  }
+
+  function drawTreeRows(lines, parentEl, depth, isRoot){
+    for(let i=0; i<lines.length; i++){
+      const item = lines[i];
+      if(item.isChildren){
+        const childBlock = document.createElement('div');
+        childBlock.className = 'tree-children';
+        for(let j=0; j<item.children.length; j++){
+          const child = item.children[j];
+          const lineDiv = document.createElement('div');
+          lineDiv.className = 'tree-line';
+          lineDiv.dataset.jpath = child.keyPath || '';
+          for(let d=0; d<depth+1; d++){
+            const sp = document.createElement('span');
+            sp.className = 'tree-indent' + (d < depth+1 ? ' has' : '');
+            lineDiv.appendChild(sp);
+          }
+          const kv = document.createElement('span');
+          kv.className = 'kv';
+          if(child.key !== null){
+            const ks = document.createElement('span');
+            ks.className = 'key';
+            ks.textContent = '"' + child.key + '"';
+            ks.dataset.jpath = child.keyPath || '';
+            // clicking a key exposes its JSONPath
+            ks.addEventListener('click', function(e){
+              e.stopPropagation();
+              const p = this.dataset.jpath;
+              if(p) revealJsonPath(p);
+            });
+            kv.appendChild(ks);
+            const sep = document.createElement('span');
+            sep.className = 'sep';
+            sep.textContent = ': ';
+            kv.appendChild(sep);
+          }
+          const vLines = child.valueLines;
+          if(vLines.length === 1 && !vLines[0].isContainer && !vLines[0].isChildren && !vLines[0].isClose){
+            const vSpan = document.createElement('span');
+            vSpan.innerHTML = vLines[0].html;
+            kv.appendChild(vSpan);
+            if(child.trailing){
+              const tr = document.createElement('span');
+              tr.className = 'json-comma';
+              tr.textContent = child.trailing;
+              kv.appendChild(tr);
+            }
+            lineDiv.appendChild(kv);
+            const tog = document.createElement('span');
+            tog.className = 'tree-toggle';
+            lineDiv.insertBefore(tog, lineDiv.firstChild);
+            childBlock.appendChild(lineDiv);
+          } else {
+            const containerDiv = document.createElement('div');
+            containerDiv.className = 'tree-expanded';
+            const topLine = document.createElement('div');
+            topLine.className = 'tree-line';
+            for(let d=0; d<depth+1; d++){
+              const sp = document.createElement('span');
+              sp.className = 'tree-indent' + (d < depth+1 ? ' has' : '');
+              topLine.appendChild(sp);
+            }
+            const tog = document.createElement('span');
+            tog.className = 'tree-toggle';
+            topLine.appendChild(tog);
+            const kv2 = document.createElement('span');
+            kv2.className = 'kv';
+            if(child.key !== null){
+              const ks = document.createElement('span');
+              ks.className = 'key';
+              ks.textContent = '"' + child.key + '"';
+              ks.dataset.jpath = child.keyPath || '';
+              ks.addEventListener('click', function(e){
+                e.stopPropagation();
+                const p = this.dataset.jpath;
+                if(p) revealJsonPath(p);
+              });
+              kv2.appendChild(ks);
+              const sep = document.createElement('span');
+              sep.className = 'sep';
+              sep.textContent = ': ';
+              kv2.appendChild(sep);
+            }
+            const firstValLine = vLines[0];
+            if(firstValLine && firstValLine.html){
+              const vSpan = document.createElement('span');
+              vSpan.innerHTML = firstValLine.html;
+              kv2.appendChild(vSpan);
+            }
+            topLine.appendChild(kv2);
+            containerDiv.appendChild(topLine);
+
+            if(vLines.length > 2){
+              const middleDiv = document.createElement('div');
+              middleDiv.className = 'tree-children';
+              const middleItems = vLines.slice(1, -1);
+              for(let mi=0; mi<middleItems.length; mi++){
+                const mitem = middleItems[mi];
+                if(mitem.isChildren){
+                  drawTreeRows([mitem], middleDiv, depth+2, false);
+                } else {
+                  const subLine = document.createElement('div');
+                  subLine.className = 'tree-line';
+                  for(let d=0; d<depth+2; d++){
+                    const sp = document.createElement('span');
+                    sp.className = 'tree-indent' + (d < depth+2 ? ' has' : '');
+                    subLine.appendChild(sp);
+                  }
+                  const tog2 = document.createElement('span');
+                  tog2.className = 'tree-toggle';
+                  subLine.appendChild(tog2);
+                  const kv3 = document.createElement('span');
+                  kv3.className = 'kv';
+                  if(mitem.html){
+                    kv3.innerHTML = mitem.html;
+                  }
+                  subLine.appendChild(kv3);
+                  middleDiv.appendChild(subLine);
+                }
+              }
+              containerDiv.appendChild(middleDiv);
+            }
+
+            const lastVLine = vLines[vLines.length-1];
+            if(lastVLine && lastVLine.html){
+              const closeLine = document.createElement('div');
+              closeLine.className = 'tree-line';
+              for(let d=0; d<depth+1; d++){
+                const sp = document.createElement('span');
+                sp.className = 'tree-indent' + (d < depth+1 ? ' has' : '');
+                closeLine.appendChild(sp);
+              }
+              const tog3 = document.createElement('span');
+              tog3.className = 'tree-toggle';
+              tog3.style.visibility = 'hidden';
+              closeLine.appendChild(tog3);
+              const kv4 = document.createElement('span');
+              kv4.className = 'kv';
+              kv4.innerHTML = lastVLine.html + (child.trailing ? '<span class="json-comma">'+child.trailing+'</span>' : '');
+              closeLine.appendChild(kv4);
+              containerDiv.appendChild(closeLine);
+            }
+
+            lineDiv.appendChild(kv);
+            childBlock.appendChild(containerDiv);
+          }
+        }
+        parentEl.appendChild(childBlock);
+      } else {
+        const lineDiv = document.createElement('div');
+        lineDiv.className = 'tree-line';
+        if(!isRoot){
+          for(let d=0; d<depth; d++){
+            const sp = document.createElement('span');
+            sp.className = 'tree-indent' + (d < depth ? ' has' : '');
+            lineDiv.appendChild(sp);
+          }
+        }
+        const tog = document.createElement('span');
+        tog.className = 'tree-toggle';
+        if(item.isContainer || item.isClose){
+          tog.style.visibility = 'hidden';
+        }
+        lineDiv.appendChild(tog);
+        const kv = document.createElement('span');
+        kv.className = 'kv';
+        if(item.html) kv.innerHTML = item.html;
+        lineDiv.appendChild(kv);
+        parentEl.appendChild(lineDiv);
+      }
+    }
+
+    // click toggles
+    parentEl.querySelectorAll('.tree-toggle').forEach(t => {
+      if(t.style.visibility === 'hidden') return;
+      t.addEventListener('click', function(e){
+        e.stopPropagation();
+        const line = this.closest('.tree-line');
+        if(!line) return;
+        const container = line.parentElement;
+        if(container.classList.contains('tree-expanded')){
+          container.classList.remove('tree-expanded');
+          container.classList.add('tree-collapsed');
+        } else if(container.classList.contains('tree-collapsed')){
+          container.classList.remove('tree-collapsed');
+          container.classList.add('tree-expanded');
+        }
+      });
+    });
+  }
+
+  /* ---- tree filtering ---- */
+  function searchTree(query){
+    if(!query){
+      treePane.querySelectorAll('.tree-hidden').forEach($id => $id.classList.remove('tree-hidden'));
+      treePane.querySelectorAll('.tree-highlight').forEach($id => {
+        const parent = $id.parentNode;
+        while($id.firstChild) parent.insertBefore($id.firstChild, $id);
+        parent.removeChild($id);
+      });
+      return;
+    }
+    const q = query.toLowerCase();
+    const allLines = treePane.querySelectorAll('.tree-line');
+    allLines.forEach(line => {
+      const text = line.textContent.toLowerCase();
+      const match = text.includes(q);
+      // keep ancestors visible when descendants match
+      let hasMatchChild = false;
+      const container = line.closest('[class*="tree-"]');
+      if(container){
+        const descendants = container.querySelectorAll('.tree-line');
+        for(const d of descendants){
+          if(d.textContent.toLowerCase().includes(q)){
+            hasMatchChild = true;
+            break;
+          }
+        }
+      }
+      if(match || hasMatchChild){
+        line.closest('.tree-line') && line.style.display === 'none' ? null : null;
+        // mark the matched text
+        if(match && q.length > 0){
+          // unwrap the previous highlight
+          const kv = line.querySelector('.kv');
+          if(kv){
+            const oldHL = kv.querySelector('.tree-highlight');
+            if(oldHL){
+              const parent = oldHL.parentNode;
+              while(oldHL.firstChild) parent.insertBefore(oldHL.firstChild, oldHL);
+              parent.removeChild(oldHL);
+            }
+            // apply the fresh highlight
+            const html = kv.innerHTML;
+            const idx = html.toLowerCase().indexOf(q);
+            if(idx >= 0){
+              const before = html.slice(0, idx);
+              const matchText = html.slice(idx, idx + q.length);
+              const after = html.slice(idx + q.length);
+              kv.innerHTML = before + '<span class="tree-highlight">' + matchText + '</span>' + after;
+            }
+          }
+        }
+        line.classList.remove('tree-hidden');
+      } else {
+        line.classList.add('tree-hidden');
+      }
+    });
+  }
+
+  treeFinder.addEventListener('input', function(){
+    searchTree(this.value);
+  });
+
+  /* ---- tree mode ---- */
+  function switchTreeView(){
+    if(isTreeOpen){
+      closeTreeMode(true);
+      return;
+    }
+    let raw = sourceBox.value.trim();
+    if(!raw && latestResult){
+      raw = latestResult;
+    }
+    if(!raw){ flashNotice('No JSON to display'); return; }
+    let parsed;
+    try{ parsed = JSON.parse(raw); } catch(e){
+      flashNotice('Invalid JSON — cannot show tree');
+      return;
+    }
+    clearParseError();
+    emptyState.classList.add('hide');
+    resultBox.classList.remove('show');
+    treePane.innerHTML = '';
+    latestTreeData = parsed;
+    const treeEl = makeTreeView(parsed, 0);
+    treePane.appendChild(treeEl);
+    treePane.classList.add('show');
+    isTreeOpen = true;
+    $id('btn-tree').textContent = '\u25BC Tree';
+    resultStats.textContent = '';
+    paintStatus('Tree view', true);
+    // expose search while tree mode is open
+    treeFinderShell.classList.add('show');
+    treeFinder.focus();
+  }
+
+  /* ---- file drop handling ---- */
+  const fileDropArea = sourceBox.parentElement;
+  let dragDepth = 0;
+
+  fileDropArea.addEventListener('dragenter', e => { e.preventDefault(); dragDepth++; dropCue.classList.add('show'); sourceBox.classList.add('drag-over'); });
+  fileDropArea.addEventListener('dragleave', e => { e.preventDefault(); dragDepth--; if(dragDepth<=0){ dragDepth=0; dropCue.classList.remove('show'); sourceBox.classList.remove('drag-over'); } });
+  fileDropArea.addEventListener('dragover', e => { e.preventDefault(); });
+
+  fileDropArea.addEventListener('drop', e => {
+    e.preventDefault();
+    dragDepth=0;
+    dropCue.classList.remove('show');
+    sourceBox.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if(!file) return;
+    if(!file.name.endsWith('.json') && file.type !== 'application/json'){
+      flashNotice('Please drop a .json file');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      sourceBox.value = ev.target.result;
+      refreshSourceStats();
+      prettyPrintJson();
+      flashNotice('Loaded ' + file.name);
+    };
+    reader.onerror = function(){ flashNotice('Failed to read file'); };
+    reader.readAsText(file);
+  });
+
+  /* ---- shortcuts ---- */
+  sourceBox.addEventListener('keydown', e => {
+    if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+      e.preventDefault();
+      prettyPrintJson();
+    }
+  });
+
+  /* ---- controls ---- */
+  $id('btn-format').addEventListener('click', prettyPrintJson);
+  $id('btn-minify').addEventListener('click', compactJson);
+  $id('btn-validate').addEventListener('click', checkJson);
+  $id('btn-copy').addEventListener('click', copyResult);
+  $id('btn-tree').addEventListener('click', switchTreeView);
+  $id('btn-clear').addEventListener('click', resetWorkspace);
+
+})();
+</script>
+</body>
+</html>
