@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JSON Pretty | Formatter and Validator</title>
+<title>JSON Formatter | Formatter and Validator</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='85'%3E%7B%7D%3C/text%3E%3C/svg%3E">
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -132,7 +132,7 @@
 <body>
 
 <header>
-  <h1><span class="brace">{</span>json<span class="brace">}</span> <span>pretty</span></h1>
+  <h1><span class="brace">{</span>json<span class="brace">}</span> <span>formatter</span></h1>
   <span class="badge">v1.1</span>
   <div class="sub">formatter | validator | tree view | JSONPath search</div>
 </header>
@@ -147,7 +147,7 @@
     </div>
     <div style="position:relative;flex:1;display:flex;flex-direction:column">
       <div class="drop-indicator" id="drop-indicator">Drop JSON file here</div>
-      <textarea id="input" placeholder='Paste JSON here, or drag & drop a .json file...&#10;&#10;Example:&#10;{"name":"JSON Pretty","version":1,"active":true}' spellcheck="false"></textarea>
+      <textarea id="input" placeholder='Paste JSON here, or drag & drop a .json file...&#10;&#10;Example:&#10;{"name":"JSON Formatter","version":1,"active":true}' spellcheck="false"></textarea>
     </div>
     <div class="toolbar">
       <button class="btn btn-primary" id="btn-format">&#x2192; Format</button>
@@ -250,7 +250,7 @@
     setTimeout(() => { if(statusLabel.textContent===msg) statusLabel.style.color='var(--muted)'; }, 3000);
   }
 
-  /* ---- pretty-print coloring ---- */
+  /* ---- formatter-print coloring ---- */
   function highlightJson(json){
     if(typeof json !== 'string') json = JSON.stringify(json, null, 2);
     return encodeHtml(json).replace(
@@ -323,8 +323,8 @@
   function prettyPrintJson(){
     const obj = readJson();
     if(!obj) return;
-    const pretty = JSON.stringify(obj, null, 2);
-    renderResult(highlightJson(pretty), pretty);
+    const formatter = JSON.stringify(obj, null, 2);
+    renderResult(highlightJson(formatter), formatter);
   }
 
   function compactJson(){
@@ -341,13 +341,13 @@
       JSON.parse(raw);
       clearParseError();
       emptyState.classList.add('hide');
-      const pretty = JSON.stringify(JSON.parse(raw), null, 2);
-      resultBox.innerHTML = '<span style="color:var(--success);font-weight:600">&#x2714; Valid JSON</span>\n\n' + highlightJson(pretty);
+      const formatter = JSON.stringify(JSON.parse(raw), null, 2);
+      resultBox.innerHTML = '<span style="color:var(--success);font-weight:600">&#x2714; Valid JSON</span>\n\n' + highlightJson(formatter);
       resultBox.classList.add('show');
       closeTreeMode(false);
       resultStats.textContent = '';
       paintStatus('Valid JSON', true);
-      latestResult = pretty;
+      latestResult = formatter;
     } catch(e){
       renderParseError(e);
     }
