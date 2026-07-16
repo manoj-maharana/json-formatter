@@ -1,5 +1,4 @@
 <div align="center">
-
 <img src="logo.png" alt="JSON Pretty Logo" width="170">
 
 # ⚡ JSON Formatter
@@ -14,6 +13,8 @@ Format, validate, beautify, and minify JSON instantly—all inside your browser.
 ![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-success?style=for-the-badge)
 ![Offline First](https://img.shields.io/badge/Offline-First-20B8A6?style=for-the-badge)
 ![MIT License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+
+**🔗 [Try the live demo](https://manoj-maharana.github.io/json-formatter/)**
 
 </div>
 
@@ -56,8 +57,9 @@ Everything runs locally inside your browser, ensuring your data never leaves you
 ## ▶️ Getting Started
 
 Simply open the application in any modern web browser.
-
 No installation, package manager, build process, or configuration is required.
+
+👉 Or skip setup entirely and [try it live here](https://manoj-maharana.github.io/json-formatter/).
 
 ---
 
@@ -67,15 +69,11 @@ The application performs every operation directly inside the browser.
 
 ```mermaid
 flowchart LR
-
 A[Paste or Drop JSON] --> B[Parse JSON]
-
 B --> C{Valid JSON?}
-
 C -- Yes --> D[Beautify or Minify]
 D --> E[Syntax Highlighting]
 E --> F[Display Output]
-
 C -- No --> G[Show Error Message]
 ```
 
@@ -85,18 +83,13 @@ C -- No --> G[Show Error Message]
 
 ```mermaid
 graph TD
-
 User --> Browser
-
 Browser --> JSONParser
 JSONParser --> Validator
-
 Validator --> Formatter
 Validator --> Minifier
-
 Formatter --> SyntaxHighlighter
 Minifier --> SyntaxHighlighter
-
 SyntaxHighlighter --> Output
 ```
 
@@ -155,7 +148,7 @@ This project is licensed under the **MIT License**.
 ---
 
 <div align="center">
-
 Made with ❤️ for developers.
 
+🔗 [manoj-maharana.github.io/json-formatter](https://manoj-maharana.github.io/json-formatter/)
 </div>
